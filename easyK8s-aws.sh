@@ -2,129 +2,174 @@
 
 cwd=`pwd`
 
-#aws cli setup
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip awscliv2.zip
-mkdir aws-cli
-sudo ./aws/install -i ./aws-cli
+usage () {
+        echo "usage: ./easyk8s-aws.sh AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY [region]"
+        echo "region is optional, defaults to us-east-2"
+}
 
-#kubectl install
-curl -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/kubectl
-chmod +x ./aws-cli/kubectl
-export PATH=$PATH:$cwd/aws-cli
+install_aws_cli () {
+        echo "[INFO] Installing AWS CLI"
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        mkdir aws-cli
+        sudo ./aws/install -i ./aws-cli
+}
 
-#iam authenticator
-curl -o ./aws-cli/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
-chmod +x ./aws-cli/aws-iam-authenticator
+install_kubectl () {
+        echo "[INFO] Installing kubectl"
+        curl -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/kubectl
+        chmod +x ./aws-cli/kubectl
+        export PATH=$PATH:$cwd/aws-cli
+}
 
-#eksctl install
-curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C ./aws-cli/
+install_iam_auth () {
+        echo "[INFO] Installing AWS IAM authenticator"
+        curl -o ./aws-cli/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
+        chmod +x ./aws-cli/aws-iam-authenticator
+        cp ./aws-cli/aws-iam-authenticator /usr/local/sbin/
+}
 
-# Prompt user that credentials must be for an administrative user OR needs to have EKS API permissions added
+install_eksctl () {
+        echo "[INFO] Installing eksctl"
+        curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C ./aws-cli/
+}
 
-# get aws Access Key ID
-# get aws SEcret Access Key
-accessKey=
-secretAccessKey=
-region="us-east-2"
-clusterName="pmmDBaaS"
-outputFormat="json"
-export AWS_ACCESS_KEY_ID=$accessKey
-export AWS_SECRET_ACCESS_KEY=$secreatAccessKey
+deploy_eks () {
+        echo "[INFO] Deploying EKS with eksctl. It might take some time."
+        # default to spot instances not to waste resources
+        # problem - it is required to set the zones. Need to implement logic for zone setting based on region
+        eksctl create cluster --managed --spot --instance-types=m5.xlarge,m4.xlarge,m5.2xlarge --zones=us-east-2a,us-east-2b,us-east-2c --name=pmmDBaaS
+}
+
+apply_k8s_roles () {
+        echo "[INFO] Applying service accounts and roles for DBaaS on Kubernetes cluster"
+        cat <<EOF | kubectl apply -f -
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: percona-dbaas-cluster-operator
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: service-account-percona-server-dbaas-xtradb-operator
+subjects:
+- kind: ServiceAccount
+  name: percona-dbaas-cluster-operator
+roleRef:
+  kind: Role
+  name: percona-xtradb-cluster-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: service-account-percona-server-dbaas-psmdb-operator
+subjects:
+- kind: ServiceAccount
+  name: percona-dbaas-cluster-operator
+roleRef:
+  kind: Role
+  name: percona-server-mongodb-operator
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: service-account-percona-server-dbaas-admin
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: service-account-percona-server-dbaas-operator-admin
+subjects:
+- kind: ServiceAccount
+  name: percona-dbaas-cluster-operator
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: service-account-percona-server-dbaas-admin
+  apiGroup: rbac.authorization.k8s.io
+EOF
+}
+
+generate_kubeconfig () {
+
+#       name=`kubectl get serviceAccounts percona-dbaas-cluster-operator -o json | jq  -r '.secrets[].name'`
+#       certificate=`kubectl get secret $name -o json | jq -r  '.data."ca.crt"'`
+#       token=`kubectl get secret $name -o json | jq -r  '.data.token' | base64 -d`
+        # avoid jq
+        name=`kubectl get serviceAccounts percona-dbaas-cluster-operator -o yaml | awk '$0~/^\-/ {print $3}'`
+        certificate=`kubectl get secret $name -o yaml | awk '$0~/ca\.crt:/ {print $2}'`
+        token=`kubectl get secret $name -o yaml | awk '$0~/token:/ {print $2}' | base64 --decode`
+        server=`kubectl cluster-info | grep 'Kubernetes control plane' | cut -d ' ' -f 7`
+
+echo "
+=====================================================================
+Copy kubeconfig below and paste it into corresponding section in PMM:
+=====================================================================
+"
+
+echo "#####BEGIN KUBECONFIG#####"
+echo "apiVersion: v1
+kind: Config
+users:
+- name: percona-dbaas-cluster-operator
+  user:
+    token: $token
+clusters:
+- cluster:
+    certificate-authority-data: $certificate
+    server: $server
+  name: self-hosted-cluster
+contexts:
+- context:
+    cluster: self-hosted-cluster
+    user: percona-dbaas-cluster-operator
+  name: svcs-acct-context
+current-context: svcs-acct-context"
+echo "#####END KUBECONFIG#####"
+
+}
+
+if [ -z $1 ]
+        then
+                echo "[ERROR] No AWS_ACCESS_KEY_ID set"
+                usage
+                exit 1;
+fi
+
+if [ -z $2 ]
+        then
+                echo "[ERROR] No AWS_SECRET_ACCESS_KEY set"
+                usage
+                exit 1;
+fi
+
+if [ -z $3 ]
+        then
+                echo "[INFO] No region is set, defaulting to us-east-2"
+                region="us-east-2"
+        else
+                region=${3}
+fi
+
+export AWS_ACCESS_KEY_ID=${1}
+export AWS_SECRET_ACCESS_KEY=${2}
 export AWS_DEFAULT_REGION=$region
 export AWS_DEFULT_OUTPUT=json
 
-#create VPC
-aws cloudformation create-stack \
-  --region $region \
-  --stack-name $clusterName-vpc-stack \
-  --template-url https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml
 
-#create cluster IAM role
-cat << EOF > ./aws-cli/cluster-role-trust-policy.json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "eks.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-EOF
-aws iam create-role \
-  --role-name $clusterName-EKSClusterRole \
-  --assume-role-policy-document file://"./aws-cli/cluster-role-trust-policy.json"
-
-aws iam attach-role-policy \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy \
-  --role-name $clusterName-EKSClusterRole
-
-
-#unclear if the aws cli is a better option than eksctl...seems eksctl command are easier to get it up and running so below may be a waste and instead try to use https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html for a basic cluster to point PMM to. 
-
-
-#create EKS cluster  
-
-### this needs cleanup to associate the role and vpc stack above still...
-aws eks create-cluster \
-   --region $region \
-   --name $clusterName \
-   --kubernetes-version 1.21 \
-   --role-arn arn:aws:iam::111122223333:role/eks-service-role-AWSServiceRoleForAmazonEKS-EXAMPLEBKZRQR \
-   --resources-vpc-config subnetIds=subnet-a9189fe2,subnet-50432629,securityGroupIds=sg-f5c54184
-
-
-#check for cluster "ACTIVE"
-aws eks describe-cluster \
-    --region $region \
-    --name $clusterName \
-    --query "cluster.status"
-
-#create kubeconfig
-mkdir ./aws-cli/.kube
-kubeconfig="./aws-cli/.kube/config-$clusterName"
-export KUBECONFIG=$KUBECONFIG:$cwd/$kubeconfig
-endpoint=`aws eks describe-cluster --region $region --name $clusterName --query "cluster.endpoint" --output text`
-certificateData=`aws eks describe-cluster --region $region --name $clusterName --query "cluster.certificateAuthority.data" --output text`
-
-cat << EOF > $kubeconfig
-apiVersion: v1
-clusters:
-- cluster:
-    server: $endpoint
-    certificate-authority-data: $certificateData
-  name: kubernetes
-contexts:
-- context:
-    cluster: kubernetes
-    user: aws
-  name: aws
-current-context: aws
-kind: Config
-preferences: {}
-users:
-- name: aws
-  user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1alpha1
-      command: aws
-      args:
-        - "eks"
-        - "get-token"
-        - "--cluster-name"
-        - "$clusterName"
-        # - "--role-arn"
-        # - "role-arn"
-      # env:
-        # - name: AWS_PROFILE
-        #   value: "aws-profile"
-EOF
-
-
-aws eks update-kubeconfig --kubeconfig=#kubeconfig --region $region --name $clusterName
-
-
+# run the thing
+install_aws_cli
+install_kubectl
+install_iam_auth
+install_eksctl
+deploy_eks
+apply_k8s_roles
+generate_kubeconfig
