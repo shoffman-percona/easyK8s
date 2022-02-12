@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -Eeuo pipefail
+trap cleanup SIGINT SIGTERM ERR EXIT
 cwd=`pwd`
 
 usage () {
@@ -7,26 +9,67 @@ usage () {
         echo "region is optional, defaults to us-east-2"
 }
 
+#######################################
+# Defines colours for output messages.
+#######################################
+setup_colors() {
+  if [[ -t 2 ]] && [[ -z "${NO_COLOR-}" ]] && [[ "${TERM-}" != "dumb" ]]; then
+    NOFORMAT='\033[0m' RED='\033[0;31m' GREEN='\033[0;32m' ORANGE='\033[0;33m'
+    BLUE='\033[0;34m' PURPLE='\033[0;35m' CYAN='\033[0;36m' YELLOW='\033[1;33m'
+  else
+    NOFORMAT='' RED='' GREEN='' ORANGE='' BLUE='' PURPLE='' CYAN='' YELLOW=''
+  fi
+}
+
+#######################################
+# Prints message to stderr with new line at the end.
+#######################################
+msg() {
+  echo >&2 -e "${1-}"
+}
+
+#######################################
+# Prints message and exit with code.
+# Arguments:
+#   message string;
+#   exit code.
+# Outputs:
+#   writes message to stderr.
+#######################################
+die() {
+  local msg=$1
+  local code=${2-1} # default exit status 1
+  msg "$msg"
+  exit "$code"
+}
+
+#######################################
+# Clean up setup if interrupt.
+#######################################
+cleanup() {
+  trap - SIGINT SIGTERM ERR EXIT
+}
+
 install_aws_cli () {
         echo "[INFO] Installing AWS CLI"
-        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip awscliv2.zip
+        curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip -qq awscliv2.zip
         mkdir aws-cli
+        export PATH=$PATH:$cwd/aws-cli
         sudo ./aws/install -i ./aws-cli
 }
 
 install_kubectl () {
         echo "[INFO] Installing kubectl"
-        curl -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/kubectl
+        curl -s -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/kubectl
         chmod +x ./aws-cli/kubectl
-        export PATH=$PATH:$cwd/aws-cli
 }
 
 install_iam_auth () {
         echo "[INFO] Installing AWS IAM authenticator"
-        curl -o ./aws-cli/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
+        curl -s -o ./aws-cli/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
         chmod +x ./aws-cli/aws-iam-authenticator
-        cp ./aws-cli/aws-iam-authenticator /usr/local/sbin/
+        #cp ./aws-cli/aws-iam-authenticator /usr/local/sbin/
 }
 
 install_eksctl () {
@@ -137,21 +180,25 @@ echo "#####END KUBECONFIG#####"
 
 }
 
-if [ -z $1 ]
+if [ -n ${1:-default} ]
         then
                 echo "[ERROR] No AWS_ACCESS_KEY_ID set"
-                usage
-                exit 1;
+		read -p "Enter your AWS Access Key ID: " AWS_ACCESS_KEY_ID
+                #exit 1;
+	else 
+		AWS_ACCESS_KEY_ID=${1}
 fi
 
-if [ -z $2 ]
+if [ -n ${2:-default} ]
         then
                 echo "[ERROR] No AWS_SECRET_ACCESS_KEY set"
-                usage
-                exit 1;
+		read -p "Enter your AWS_SECRET_ACCESS_KEY: " AWS_SECRET_ACCESS_KEY
+                #exit 1;
+	else
+		AWS_SECRET_ACCESS_KEY=${2}
 fi
 
-if [ -z $3 ]
+if [ -n ${3:-default} ]
         then
                 echo "[INFO] No region is set, defaulting to us-east-2"
                 region="us-east-2"
@@ -159,13 +206,14 @@ if [ -z $3 ]
                 region=${3}
 fi
 
-export AWS_ACCESS_KEY_ID=${1}
-export AWS_SECRET_ACCESS_KEY=${2}
+export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
 export AWS_DEFAULT_REGION=$region
 export AWS_DEFULT_OUTPUT=json
 
 
 # run the thing
+setup_colors
 install_aws_cli
 install_kubectl
 install_iam_auth
