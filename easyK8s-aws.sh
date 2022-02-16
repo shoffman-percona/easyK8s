@@ -180,7 +180,7 @@ echo "#####END KUBECONFIG#####"
 
 }
 
-if [ -n ${1} ]
+if [ -n ${1:-default} ]
         then
                 echo "[ERROR] No AWS_ACCESS_KEY_ID set"
 		read -p "Enter your AWS Access Key ID: " AWS_ACCESS_KEY_ID
@@ -189,7 +189,7 @@ if [ -n ${1} ]
 		AWS_ACCESS_KEY_ID=${1}
 fi
 
-if [ -n ${2} ]
+if [ -n ${2:-default} ]
         then
                 echo "[ERROR] No AWS_SECRET_ACCESS_KEY set"
 		read -p "Enter your AWS_SECRET_ACCESS_KEY: " AWS_SECRET_ACCESS_KEY
@@ -198,7 +198,7 @@ if [ -n ${2} ]
 		AWS_SECRET_ACCESS_KEY=${2}
 fi
 
-if [ -n ${3} ]
+if [ -n ${3:-default} ]
         then
                 echo "[INFO] No region is set, defaulting to us-east-2"
                 region="us-east-2"
