@@ -3,10 +3,12 @@
 set -Eeuo pipefail
 trap cleanup SIGINT SIGTERM ERR EXIT
 cwd=`pwd`
+default_region="us-east-2"
+default=""
 
 usage () {
         echo "usage: ./easyk8s-aws.sh AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY [region]"
-        echo "region is optional, defaults to us-east-2"
+        echo "region is optional, defaults to $default_region"
 }
 
 #######################################
@@ -180,30 +182,32 @@ echo "#####END KUBECONFIG#####"
 
 }
 
-if [ -n ${1:-default} ]
+aws_key=${1:-}
+if [ -z "$aws_key" ]
         then
                 echo "[ERROR] No AWS_ACCESS_KEY_ID set"
 		read -p "Enter your AWS Access Key ID: " AWS_ACCESS_KEY_ID
-                #exit 1;
 	else 
 		AWS_ACCESS_KEY_ID=${1}
 fi
 
-if [ -n ${2:-default} ]
+aws_secret=${2:-}
+if [ -z "$aws_secret" ]
         then
                 echo "[ERROR] No AWS_SECRET_ACCESS_KEY set"
 		read -p "Enter your AWS_SECRET_ACCESS_KEY: " AWS_SECRET_ACCESS_KEY
-                #exit 1;
 	else
 		AWS_SECRET_ACCESS_KEY=${2}
 fi
 
-if [ -n ${3:-default} ]
+reg=${3:-}
+if [ -z "$reg" ]
         then
-                echo "[INFO] No region is set, defaulting to us-east-2"
-                region="us-east-2"
+                echo "[INFO] No region is set, defaulting to $default_region"
+                region=$default_region
         else
-                region=${3}
+		echo "[INFO] Region override to $reg"
+                region=$reg
 fi
 
 export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
