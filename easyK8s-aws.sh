@@ -77,7 +77,6 @@ echo "[INFO] Installing AWS CLI"
         sudo ./aws/install -i ./aws-cli
 	rm -f awscliv2.zip
    fi
-exit
 }
 
 install_kubectl () {
