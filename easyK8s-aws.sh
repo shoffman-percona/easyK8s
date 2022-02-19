@@ -68,7 +68,7 @@ echo "[INFO] Installing AWS CLI"
    export PATH=$PATH:$cwd/aws-cli
    if is_darwin
      then
-	curl -fsSL"https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+	curl -fsSL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
 	sudo installer -pkg AWSCLIV2.pkg -target ./aws-cli
 	rm -f AWSCLIV2.pgk
    else
