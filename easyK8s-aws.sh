@@ -64,16 +64,18 @@ is_darwin() {
 
 install_aws_cli () {
 echo "[INFO] Installing AWS CLI"
+   mkdir aws-cli
+   export PATH=$PATH:$cwd/aws-cli
    if is_darwin
      then
 	curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
 	sudo installer -pkg AWSCLIV2.pkg -target ./aws-cli
+	rm -f AWSCLIV2.pgk
    else
  	curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
         unzip -qq awscliv2.zip
-        mkdir aws-cli
-        export PATH=$PATH:$cwd/aws-cli
         sudo ./aws/install -i ./aws-cli
+	rm -f awscliv2.zip
    fi
 exit
 }
