@@ -69,7 +69,7 @@ echo "[INFO] Installing AWS CLI"
    if is_darwin
      then
 	curl -fsSL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
-	sudo installer -pkg AWSCLIV2.pkg -target ./aws-cli
+	sudo installer -pkg AWSCLIV2.pkg -target /
 	rm -f AWSCLIV2.pgk
    else
  	curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
