@@ -52,13 +52,30 @@ cleanup() {
   trap - SIGINT SIGTERM ERR EXIT
 }
 
+#######################################
+# Check if MacOS
+#######################################
+is_darwin() {
+   case "$(uname -s)" in
+     *darwin* | *Darwin* ) true ;;
+     * ) false;;
+   esac
+}
+
 install_aws_cli () {
-        echo "[INFO] Installing AWS CLI"
-        curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+echo "[INFO] Installing AWS CLI"
+   if is_darwin
+     then
+	curl "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
+	sudo installer -pkg AWSCLIV2.pkg -target ./aws-cli
+   else
+ 	curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
         unzip -qq awscliv2.zip
         mkdir aws-cli
         export PATH=$PATH:$cwd/aws-cli
         sudo ./aws/install -i ./aws-cli
+   fi
+exit
 }
 
 install_kubectl () {
