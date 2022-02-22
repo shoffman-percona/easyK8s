@@ -66,11 +66,13 @@ install_aws_cli () {
 echo "[INFO] Installing AWS CLI"
    mkdir aws-cli
    export PATH=$PATH:$cwd/aws-cli
-   if is_darwin
+   if [[ is_darwin ]]
      then
-	curl -fsSL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "AWSCLIV2.pkg"
-	sudo installer -pkg AWSCLIV2.pkg -target /
-	rm -f AWSCLIV2.pgk
+	echo "[INFO] MacOS detected"
+	exit
+	curl -fsSL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o "awscliv2.pkg"
+	sudo installer -pkg awscliv2.pkg -target /
+	rm -f awscliv2.pgk
    else
  	curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
         unzip -qq awscliv2.zip
@@ -80,28 +82,47 @@ echo "[INFO] Installing AWS CLI"
 }
 
 install_kubectl () {
-        echo "[INFO] Installing kubectl"
-        curl -s -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/kubectl
+echo "[INFO] Installing kubectl"
+   if [[ is_darwin ]]
+     then
+     	curl -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/darwin/amd64/kubectl
+	chmod +x ./aws-cli/kubectl
+   else
+	curl -s -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/kubectl
         chmod +x ./aws-cli/kubectl
+   fi
 }
 
 install_iam_auth () {
-        echo "[INFO] Installing AWS IAM authenticator"
+echo "[INFO] Installing AWS IAM authenticator"
+   if [[ is_darwin ]]
+     then
+	curl -o ./aws-cli/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/darwin/amd64/aws-iam-authenticator	
+	chmod +x ./aws-cli/aws-iam-authenticator
+   else
         curl -s -o ./aws-cli/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
         chmod +x ./aws-cli/aws-iam-authenticator
-        #cp ./aws-cli/aws-iam-authenticator /usr/local/sbin/
+   fi
 }
 
 install_eksctl () {
-        echo "[INFO] Installing eksctl"
+echo "[INFO] Installing eksctl"
+   if [[ is_darwin ]]
+     then
+	#need to get eksctl installed for mac
+	echo "Mac support not built yet"
+	exit
+   else
         curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C ./aws-cli/
+   fi
+exit
 }
 
 deploy_eks () {
         echo "[INFO] Deploying EKS with eksctl. It might take some time."
         # default to spot instances not to waste resources
         # problem - it is required to set the zones. Need to implement logic for zone setting based on region
-        eksctl create cluster --managed --spot --instance-types=m5.xlarge,m4.xlarge,m5.2xlarge --zones=${region}a,${region}b,${region}c --name=pmmDBaaS --nodes=3
+        ./aws-cli/eksctl create cluster --managed --spot --instance-types=m5.xlarge,m4.xlarge,m5.2xlarge --zones=${region}a,${region}b,${region}c --name=pmmDBaaS --nodes=3
 }
 
 apply_k8s_roles () {
