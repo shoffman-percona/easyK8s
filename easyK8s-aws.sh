@@ -115,7 +115,6 @@ echo "[INFO] Installing eksctl"
    else
         curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C ./aws-cli/
    fi
-exit
 }
 
 deploy_eks () {
