@@ -66,7 +66,7 @@ install_aws_cli () {
 echo "[INFO] Installing AWS CLI"
    mkdir aws-cli
    export PATH=$PATH:$cwd/aws-cli
-   if [[ is_darwin ]]
+   if is_darwin
      then
 	echo "[INFO] MacOS detected"
 	exit
@@ -83,7 +83,7 @@ echo "[INFO] Installing AWS CLI"
 
 install_kubectl () {
 echo "[INFO] Installing kubectl"
-   if [[ is_darwin ]]
+   if is_darwin
      then
      	curl -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/darwin/amd64/kubectl
 	chmod +x ./aws-cli/kubectl
@@ -95,7 +95,7 @@ echo "[INFO] Installing kubectl"
 
 install_iam_auth () {
 echo "[INFO] Installing AWS IAM authenticator"
-   if [[ is_darwin ]]
+   if is_darwin
      then
 	curl -o ./aws-cli/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/darwin/amd64/aws-iam-authenticator	
 	chmod +x ./aws-cli/aws-iam-authenticator
@@ -107,7 +107,7 @@ echo "[INFO] Installing AWS IAM authenticator"
 
 install_eksctl () {
 echo "[INFO] Installing eksctl"
-   if [[ is_darwin ]]
+   if is_darwin
      then
 	#need to get eksctl installed for mac
 	echo "Mac support not built yet"
