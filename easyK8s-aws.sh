@@ -134,7 +134,7 @@ metadata:
   name: percona-dbaas-cluster-operator
 ---
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: service-account-percona-server-dbaas-xtradb-operator
 subjects:
@@ -146,7 +146,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: service-account-percona-server-dbaas-psmdb-operator
 subjects:
@@ -157,7 +157,7 @@ roleRef:
   name: percona-server-mongodb-operator
   apiGroup: rbac.authorization.k8s.io
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: service-account-percona-server-dbaas-admin
@@ -166,7 +166,7 @@ rules:
   resources: ["*"]
   verbs: ["*"]
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: service-account-percona-server-dbaas-operator-admin
