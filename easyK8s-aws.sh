@@ -76,7 +76,7 @@ echo "[INFO] Installing AWS CLI"
    else
  	curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
         unzip -qq awscliv2.zip
-        sudo ./aws/install -i ./aws-cli
+        sudo ./aws/install -i $cwd/aws-cli
 	rm -f awscliv2.zip
    fi
 }
@@ -85,10 +85,10 @@ install_kubectl () {
 echo "[INFO] Installing kubectl"
    if is_darwin
      then
-     	curl -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/darwin/amd64/kubectl
+     	curl -L -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.23.15/2023-01-11/bin/darwin/amd64/kubectl
 	chmod +x ./aws-cli/kubectl
    else
-	curl -s -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/kubectl
+	curl -sL -o ./aws-cli/kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.23.15/2023-01-11/bin/linux/amd64/kubectl
         chmod +x ./aws-cli/kubectl
    fi
 }
@@ -97,10 +97,10 @@ install_iam_auth () {
 echo "[INFO] Installing AWS IAM authenticator"
    if is_darwin
      then
-	curl -o ./aws-cli/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/darwin/amd64/aws-iam-authenticator	
+	curl -L -o ./aws-cli/aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.9/aws-iam-authenticator_0.5.9_darwin_amd64
 	chmod +x ./aws-cli/aws-iam-authenticator
    else
-        curl -s -o ./aws-cli/aws-iam-authenticator https://amazon-eks.s3.us-west-2.amazonaws.com/1.21.2/2021-07-05/bin/linux/amd64/aws-iam-authenticator
+        curl -sL -o ./aws-cli/aws-iam-authenticator https://github.com/kubernetes-sigs/aws-iam-authenticator/releases/download/v0.5.9/aws-iam-authenticator_0.5.9_linux_amd64
         chmod +x ./aws-cli/aws-iam-authenticator
    fi
 }
@@ -121,7 +121,7 @@ deploy_eks () {
         echo "[INFO] Deploying EKS with eksctl. It might take some time."
         # default to spot instances not to waste resources
         # problem - it is required to set the zones. Need to implement logic for zone setting based on region
-        ./aws-cli/eksctl create cluster --managed --spot --instance-types=m5.xlarge,m4.xlarge,m5.2xlarge --zones=${region}a,${region}b,${region}c --name=pmmDBaaS --nodes=3
+        ./aws-cli/eksctl create cluster --managed --spot --instance-types=m5.xlarge,m4.xlarge,m5.2xlarge --zones=${region}a,${region}b,${region}c --name=pmmDBaaSshoffman --nodes=3 --version=1.23
 }
 
 apply_k8s_roles () {
