@@ -178,6 +178,14 @@ roleRef:
   kind: ClusterRole
   name: service-account-percona-server-dbaas-admin
   apiGroup: rbac.authorization.k8s.io
+---  
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/service-account-token
+metadata:
+  name: percona-dbaas-cluster-operator
+    annotations:
+        kubernetes.io/service-account.name: "percona-dbaas-cluster-operator"
 EOF
 }
 
