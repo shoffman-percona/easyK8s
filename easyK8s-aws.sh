@@ -184,8 +184,8 @@ kind: Secret
 type: kubernetes.io/service-account-token
 metadata:
   name: percona-dbaas-cluster-operator
-    annotations:
-        kubernetes.io/service-account.name: "percona-dbaas-cluster-operator"
+  annotations:
+    kubernetes.io/service-account.name: "percona-dbaas-cluster-operator"
 EOF
 }
 
@@ -196,6 +196,7 @@ generate_kubeconfig () {
 #       token=`kubectl get secret $name -o json | jq -r  '.data.token' | base64 -d`
         # avoid jq
         name=`kubectl get serviceAccounts percona-dbaas-cluster-operator -o yaml | awk '$0~/^\-/ {print $3}'`
+	[ -z "$name" ] && name="percona-dbaas-cluster-operator"
         certificate=`kubectl get secret $name -o yaml | awk '$0~/ca\.crt:/ {print $2}'`
         token=`kubectl get secret $name -o yaml | awk '$0~/token:/ {print $2}' | base64 --decode`
         server=`kubectl cluster-info | grep 'Kubernetes control plane' | cut -d ' ' -f 7`
