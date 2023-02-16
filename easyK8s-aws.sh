@@ -121,7 +121,7 @@ deploy_eks () {
         echo "[INFO] Deploying EKS with eksctl. It might take some time."
         # default to spot instances not to waste resources
         # problem - it is required to set the zones. Need to implement logic for zone setting based on region
-        ./aws-cli/eksctl create cluster --managed --spot --instance-types=m5.xlarge,m4.xlarge,m5.2xlarge --zones=${region}a,${region}b,${region}c --name=pmmDBaaSshoffman --nodes=3 --version=1.23
+        ./aws-cli/eksctl create cluster --managed --spot --instance-types=m5.xlarge,m4.xlarge,m5.2xlarge --zones=${region}a,${region}b,${region}c --name=pmmDBaaS --nodes=3 --version=1.23
 }
 
 apply_k8s_roles () {
